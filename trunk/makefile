@@ -8,7 +8,7 @@ all : space-saving
 space-saving : $(OBJS)
 	$(CC) $(LFLAGS) $(OBJS) -o space-saving 
 
-build/runner.o : src/runner.cpp src/hasher.h src/space-saving.h
+build/runner.o : src/runner.cpp src/hasher.h src/space-saving.h src/hash-map.h
 	$(CC) $(CFLAGS) src/runner.cpp -o build/runner.o
 
 build/hasher.o : src/hasher.h src/hasher.cpp
