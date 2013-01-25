@@ -13,16 +13,14 @@ class Parent {
   Parent* right_;
   Child* child_;
   unsigned long long value_;
-  unsigned long long size_;
 };
 
 class Child {
  public:
   Child();
-  void Detach(Parent** smallest);
+  void Detach(Parent** smallest, HashMap* map);
   Parent* parent_;
-  Child* left_;
-  Child* right_;
+  Child* next_;
   unsigned long long element_;
 };
 

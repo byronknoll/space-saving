@@ -3,43 +3,50 @@
 
 #include "space-saving.h"
 
-Parent::Parent() : left_(NULL), right_(NULL), child_(NULL), value_(0), size_(0) {}
+Parent::Parent() : left_(NULL), right_(NULL), child_(NULL), value_(0) {}
 
 void Parent::Add(Child* c) {
   c->parent_ = this;
-  ++size_;
-  if (size_ == 1) {
+  if (child_ == NULL) {
     child_ = c;
-    c->left_ = c;
-    c->right_ = c;
+    c->next_ = c;
     return;
   }
-  c->right_ = child_;
-  c->left_ = child_->left_;
-  child_->left_->right_ = c;
-  child_->left_ = c;
+  c->next_ = child_->next_;
+  child_->next_ = c;
+  child_ = c;
 }
 
-Child::Child() : parent_(NULL), left_(NULL), right_(NULL), element_(0) {}
+Child::Child() : parent_(NULL), next_(NULL), element_(0) {}
 
-void Child::Detach(Parent** smallest) {
-  if (parent_->size_ == 1) {
+void Child::Detach(Parent** smallest, HashMap* map) {
+  if (next_ == this) {
     if (parent_ == *smallest) {
       *smallest = parent_->right_;
+      parent_->right_->left_ = NULL;
+      delete parent_;
+      return;
     }
     parent_->right_->left_ = parent_->left_;
-    if (parent_->left_ != NULL) {
-      parent_->left_->right_ = parent_->right_;
-    }
+    parent_->left_->right_ = parent_->right_;
     delete parent_;
     return;
   }
-  if (parent_->child_ == this) {
-    parent_->child_ = right_;
+  if (parent_->child_ == next_) {
+    parent_->child_ = this;
   }
-  left_->right_ = right_;
-  right_->left_ = left_;
-  --(parent_->size_);
+  unsigned long long temp = element_;
+  element_ = next_->element_;
+  next_->element_ = temp;
+  if (element_) {
+    map->Find(element_, &temp);
+    map->values_[temp] = this;
+  }
+  if (next_->element_) {
+    map->Find(next_->element_, &temp);
+    map->values_[temp] = next_;
+  }
+  next_ = next_->next_;
 }
 
 SpaceSaving::SpaceSaving(const unsigned long long& num_counters) {
@@ -80,12 +87,15 @@ void SpaceSaving::Increment(Child* bucket) {
   unsigned long long count = bucket->parent_->value_ + 1;
   Parent* next = bucket->parent_->right_;
   if (next != NULL && next->value_ == count) {
-    bucket->Detach(&smallest_);
-    next->Add(bucket);
-  } else if (bucket->parent_->size_ == 1) {
+    Child* temp = bucket->next_;
+    bucket->Detach(&smallest_, map_);
+    next->Add(temp);
+  } else if (bucket->next_ == bucket) {
     bucket->parent_->value_ = count;
   } else {
-    bucket->Detach(&smallest_);
+    Child* temp = bucket->next_;
+    bucket->Detach(&smallest_, map_);
+    bucket = temp;
     Parent* p = new Parent();
     p->left_ = bucket->parent_;
     p->value_ = count;
@@ -123,7 +133,7 @@ void SpaceSaving::ExtractTop(const unsigned long long output_counters, HashMap* 
       map->Insert(c->element_, c2);
       ++count;
       if (count == output_counters) break;
-      c = c->right_;
+      c = c->next_;
     } while (c != largest_->child_);
     if (count == output_counters) break;
     largest_ = largest_->left_;
@@ -137,7 +147,7 @@ void SpaceSaving::Print(char** ngrams) {
     Child* c = largest_->child_;
     do {
       map_->Find(c->element_, &index);
-      c = c->right_;
+      c = c->next_;
       std::cout << ngrams[index] << "\t" << largest_->value_ << std::endl;
     } while (c != largest_->child_);
     largest_ = largest_->left_;
